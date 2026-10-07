@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<!-- saved from url=(0056)file:///C:/Users/chas/Downloads/8bit_music_maker_v2.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="Create chiptune melodies with a touch-friendly 8-bit music sequencer.">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="8-Bit Music Maker">
+<title>8-Bit Music Maker</title>
+<style>
+  :root{
+    --bg:#111827;
+    --panel:#1f2937;
+    --panel2:#0f172a;
+    --text:#e5e7eb;
+    --muted:#9ca3af;
+    --line:#334155;
+    --play:#f59e0b;
+    --on1:#4ade80;
+    --on1b:#16a34a;
+    --on2:#60a5fa;
+    --on2b:#2563eb;
+    --on3:#f472b6;
+    --on3b:#db2777;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial, Helvetica, sans-serif;background:linear-gradient(180deg,#0b1220,#111827);color:var(--text)}
+  .wrap{max-width:1600px;margin:0 auto;padding:20px}
+  h1{margin:0 0 8px 0;font-size:30px}
+  .sub{color:var(--muted);margin-bottom:18px}
+  .status{color:#fbbf24;font-size:13px;min-height:1.2em;margin-top:10px}
+  .panel{background:rgba(31,41,55,.95);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 8px 24px rgba(0,0,0,.22)}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  button, input, select, textarea{font:inherit}
+  button{background:var(--panel2);color:var(--text);border:1px solid #475569;border-radius:10px;padding:10px 14px;cursor:pointer}
+  button:hover{border-color:#94a3b8}
+  button.primary{background:#14532d;border-color:#22c55e}
+  button.warn{background:#78350f;border-color:#f59e0b}
+  button.danger{background:#4c0519;border-color:#fb7185}
+  label{display:flex;align-items:center;gap:8px;color:var(--text);background:var(--panel2);border:1px solid #475569;padding:10px 12px;border-radius:10px}
+  input[type="number"], select{width:98px;background:transparent;color:var(--text);border:none;outline:none}
+  #gridWrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#0b1020;max-height:72vh}
+  table{border-collapse:collapse;min-width:max-content;width:100%}
+  th, td{border:1px solid #243042;text-align:center}
+  th{position:sticky;top:0;background:#111827;z-index:3;font-size:12px;color:#cbd5e1;padding:8px 6px}
+  th.noteHead{left:0;z-index:6;position:sticky;background:#111827;padding:0 10px;min-width:90px}
+  td.noteLabel{position:sticky;left:0;background:#0f172a;z-index:2;color:#cbd5e1;font-size:12px;min-width:90px;padding:0 10px;text-align:left;white-space:nowrap}
+  td.noteLabel.sharpLabel{background:#131c2d;color:#f8fafc}
+  td.stepCell{width:24px;height:22px;cursor:pointer;background:#0b1020;transition:background .08s ease, transform .08s ease}
+  td.stepCell.blackKeyRow{background:#10182a}
+  td.stepCell:hover{background:#162033}
+  td.stepCell.blackKeyRow:hover{background:#1b2740}
+  td.stepCell.on.ch1{background:linear-gradient(180deg,var(--on1),var(--on1b))}
+  td.stepCell.on.ch2{background:linear-gradient(180deg,var(--on2),var(--on2b))}
+  td.stepCell.on.ch3{background:linear-gradient(180deg,var(--on3),var(--on3b))}
+  td.stepCell.playhead{box-shadow:inset 0 0 0 2px var(--play)}
+  td.stepCell.beat{border-left:2px solid #64748b}
+  td.stepCell.bar{border-left:3px solid #cbd5e1}
+  .small{color:var(--muted);font-size:13px;margin-top:10px}
+  textarea{width:100%;min-height:330px;resize:vertical;background:#0b1020;color:#e2e8f0;border:1px solid var(--line);border-radius:12px;padding:12px;line-height:1.35}
+  .row{display:grid;gap:16px;grid-template-columns:1.55fr .95fr}
+  .chipbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .chip{padding:8px 12px;border-radius:999px;border:1px solid #475569;background:#0f172a;cursor:pointer;user-select:none}
+  .chip.active{outline:2px solid #e5e7eb22;border-color:#cbd5e1}
+  .chip.ch1.active{background:#14532d}
+  .chip.ch2.active{background:#1d4ed8}
+  .chip.ch3.active{background:#9d174d}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;color:#cbd5e1;font-size:13px}
+  .sw{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+  .sw1{background:linear-gradient(180deg,var(--on1),var(--on1b))}
+  .sw2{background:linear-gradient(180deg,var(--on2),var(--on2b))}
+  .sw3{background:linear-gradient(180deg,var(--on3),var(--on3b))}
+  select.wide{width:auto;min-width:130px;background:var(--panel2);color:var(--text);border:1px solid #475569;border-radius:8px;padding:6px 8px}
+  label.fileBtn{cursor:pointer}
+  label.fileBtn input{display:none}
+  input[type="range"]{width:140px}
+  .sampleRow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;padding:10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px}
+  .sampleRow input[type="text"]{background:#0b1020;color:var(--text);border:1px solid #475569;border-radius:8px;padding:6px 8px;width:150px}
+  .sampleRow button{padding:6px 10px}
+  #mobileBarNav{display:none;justify-content:space-between;align-items:center;margin-bottom:10px}
+  #mobileBarLabel{font-weight:700;color:#e2e8f0;min-width:90px;text-align:center}
+  #mobileBarNav button{min-width:88px}
+  td.stepCell{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  @media (max-width: 1000px){.row{grid-template-columns:1fr}}
+  @media (max-width: 700px){
+    .wrap{padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+    h1{font-size:24px}
+    .sub{font-size:14px;margin-bottom:12px}
+    .panel{padding:12px;margin-bottom:12px;border-radius:12px}
+    .controls{gap:7px}
+    .controls button{padding:9px 10px;font-size:14px}
+    label{padding:8px 9px;font-size:14px}
+    input[type="number"], select{font-size:16px}
+    #gridWrap{max-height:60vh;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+    #mobileBarNav{display:flex}
+    #gridWrap table{width:100%;min-width:0;table-layout:fixed}
+    #gridWrap th,#gridWrap td{padding:3px 1px;font-size:10px}
+    #gridWrap th.noteHead,#gridWrap td.noteLabel{width:48px;min-width:48px;max-width:48px;padding:0 4px;font-size:11px}
+    #gridWrap td.stepCell{height:30px;min-width:0}
+    #channelTabs{gap:6px}
+    .chip{padding:7px 9px;font-size:12px}
+    #channelSettings label{flex-wrap:wrap}
+    #channelSettings input[type="range"]{width:110px}
+    .legend{gap:8px;font-size:12px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>8-Bit Music Maker</h1>
+  <div class="sub">Three channels, expandable octaves, note preview on placement, standalone HTML export, and WAV audio export.</div>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="playBtn" class="primary">Play</button>
+      <button id="stopBtn" class="warn">Stop</button>
+      <button id="clearBtn" class="danger">Clear Current Channel</button>
+      <button id="clearAllBtn" class="danger">Clear All Channels</button>
+      <button id="addStepBtn">+ 16 Steps</button>
+      <button id="removeStepBtn">- 16 Steps</button>
+      <button id="addOctaveHighBtn">+ Octave Up</button>
+      <button id="removeOctaveHighBtn">- Octave Up</button>
+      <button id="addOctaveLowBtn">+ Octave Down</button>
+      <button id="removeOctaveLowBtn">- Octave Down</button>
+      <label>Tempo
+        <input id="tempoInput" type="number" min="40" max="300" step="1" value="140">
+      </label>
+      <label>Preview Length
+        <input id="previewLengthInput" type="number" min="0.03" max="1" step="0.01" value="0.14">
+      </label>
+      <button id="exportBtn">Generate Export HTML</button>
+      <button id="downloadBtn">Download Export HTML</button>
+      <button id="copyBtn">Copy Export Code</button>
+      <button id="wavBtn">Download WAV</button>
+    </div>
+    <div id="audioExportStatus" class="status" aria-live="polite"></div>
+
+    <div class="chipbar" id="channelTabs"><button class="chip ch1">Channel 1 · square</button><button class="chip ch2">Channel 2 · triangle</button><button class="chip ch3 active">Channel 3 · sawtooth</button></div>
+    <div class="controls" id="channelSettings" style="margin-top:12px"></div>
+
+    <div class="legend">
+      <span><span class="sw sw1"></span>Channel 1</span>
+      <span><span class="sw sw2"></span>Channel 2</span>
+      <span><span class="sw sw3"></span>Channel 3</span>
+    </div>
+
+    <div class="small">White line = new bar (16 steps). Gray line = beat group (4 steps). Click a square to toggle a note in the selected channel and hear a preview. Audio downloads contain one complete pass through the grid, including the natural tail of any ringing notes.</div>
+  </div>
+
+  <div class="row">
+    <div class="panel">
+      <div id="mobileBarNav" aria-label="Choose a bar">
+        <button id="previousBarBtn" type="button">← Previous</button>
+        <span id="mobileBarLabel" aria-live="polite"></span>
+        <button id="nextBarBtn" type="button">Next →</button>
+      </div>
+      <div id="gridWrap"></div>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0;font-size:20px;">Exported HTML</h2>
+      <div class="small" style="margin-bottom:10px;">The export is a complete standalone HTML player with all three channels and the current octave range built in.</div>
+      <textarea id="exportBox" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2 style="margin-top:0;font-size:20px;">Custom Sounds</h2>
+    <div class="controls">
+      <label class="fileBtn">+ Load sound file(s) (.wav / .mp3)<input id="sampleFile" type="file" accept=".wav,.mp3,audio/*" multiple></label>
+      <button id="saveProjBtn">Save Project (.json)</button>
+      <label class="fileBtn">Load Project<input id="loadProjFile" type="file" accept=".json,application/json"></label>
+    </div>
+    <div id="sampleList"></div>
+    <div class="small">Each file is assumed to be playing middle C (C4), and gets pitch-shifted for every other row. If a recording is a different note, set its "Recorded pitch". After loading, pick it from the Sound menu under the channel tabs. Samples are not remembered between visits, so use Save Project to keep them with your song.</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const NOTE_ORDER = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  const channels = [
+    { name: "Channel 1", sound: "square", level: 1, volume: 0.12, noteLength: 0.16, className: "ch1" },
+    { name: "Channel 2", sound: "triangle", level: 1, volume: 0.10, noteLength: 0.18, className: "ch2" },
+    { name: "Channel 3", sound: "sawtooth", level: 1, volume: 0.08, noteLength: 0.14, className: "ch3" }
+  ];
+
+  let activeChannel = 0;
+  let lowOctave = 3;
+  let highOctave = 5;
+  let steps = 64;
+  let mobileBarIndex = 0;
+  let notes = [];
+  let grids = [];
+  let currentStep = -1;
+  let timer = null;
+  let audioCtx = null;
+
+  const gridWrap = document.getElementById("gridWrap");
+  const mobileBarLabel = document.getElementById("mobileBarLabel");
+  const previousBarBtn = document.getElementById("previousBarBtn");
+  const nextBarBtn = document.getElementById("nextBarBtn");
+  const playBtn = document.getElementById("playBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const clearAllBtn = document.getElementById("clearAllBtn");
+  const addStepBtn = document.getElementById("addStepBtn");
+  const removeStepBtn = document.getElementById("removeStepBtn");
+  const addOctaveHighBtn = document.getElementById("addOctaveHighBtn");
+  const removeOctaveHighBtn = document.getElementById("removeOctaveHighBtn");
+  const addOctaveLowBtn = document.getElementById("addOctaveLowBtn");
+  const removeOctaveLowBtn = document.getElementById("removeOctaveLowBtn");
+  const tempoInput = document.getElementById("tempoInput");
+  const previewLengthInput = document.getElementById("previewLengthInput");
+  const exportBtn = document.getElementById("exportBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
+  const copyBtn = document.getElementById("copyBtn");
+  const wavBtn = document.getElementById("wavBtn");
+  const audioExportStatus = document.getElementById("audioExportStatus");
+  const exportBox = document.getElementById("exportBox");
+  const channelTabs = document.getElementById("channelTabs");
+  const channelSettings = document.getElementById("channelSettings");
+  const sampleList = document.getElementById("sampleList");
+  const sampleFile = document.getElementById("sampleFile");
+  const saveProjBtn = document.getElementById("saveProjBtn");
+  const loadProjFile = document.getElementById("loadProjFile");
+
+  function midiToFreq(midi) {
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  /* ---------- Custom sound (sample) support ---------- */
+  const WAVES = [["square","Square"],["triangle","Triangle"],["sawtooth","Sawtooth"],["sine","Sine"]];
+  const samples = [];   // { id, name, rootNote, rootFreq, fullLength, buffer, b64 }
+  let nextSampleId = 1;
+  let exportTimer = null;
+  const ROOT_CHOICES = [];
+  for (let o = 1; o <= 7; o++) NOTE_ORDER.forEach(n => ROOT_CHOICES.push(n + o));
+
+  function noteToFreq(name) {
+    const m = /^([A-G]#?)(\d)$/.exec(name);
+    return midiToFreq((Number(m[2]) + 1) * 12 + NOTE_ORDER.indexOf(m[1]));
+  }
+  function sampleById(id) { return samples.find(s => String(s.id) === String(id)); }
+  function isSample(sound) { return typeof sound === "string" && sound.startsWith("s:"); }
+  function soundLabel(sound) {
+    if (isSample(sound)) { const s = sampleById(sound.slice(2)); return s ? s.name : "square"; }
+    return sound;
+  }
+  function bufToB64(ab) {
+    const bytes = new Uint8Array(ab);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+  function b64ToBuf(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  }
+  function decodeAudio(ctx, ab) {
+    return new Promise((res, rej) => {
+      const p = ctx.decodeAudioData(ab, res, rej);
+      if (p && p.catch) p.catch(rej);
+    });
+  }
+
+  async function addSampleFile(file) {
+    try {
+      const ab = await file.arrayBuffer();
+      const b64 = bufToB64(ab);
+      const buffer = await decodeAudio(ensureAudio(), ab.slice(0));
+      samples.push({
+        id: nextSampleId++,
+        name: file.name.replace(/\.[^.]+$/, "").slice(0, 24) || "Sound",
+        rootNote: "C4", rootFreq: noteToFreq("C4"), fullLength: true, buffer, b64
+      });
+      renderSampleList(); renderChannelTabs(); updateExport();
+    } catch (err) {
+      alert("Couldn't load \"" + file.name + "\". Is it a valid .wav or .mp3?");
+    }
+  }
+
+  function renderSampleList() {
+    sampleList.innerHTML = "";
+    if (!samples.length) {
+      sampleList.innerHTML = '<div class="small">No custom sounds loaded yet.</div>';
+      return;
+    }
+    samples.forEach(s => {
+      const row = document.createElement("div");
+      row.className = "sampleRow";
+
+      const name = document.createElement("input");
+      name.type = "text"; name.maxLength = 24; name.value = s.name;
+      name.addEventListener("change", () => {
+        s.name = name.value.trim() || "Sound";
+        renderChannelTabs(); updateExport();
+      });
+
+      const rootLab = document.createElement("span");
+      rootLab.textContent = "Recorded pitch:";
+      const root = document.createElement("select");
+      root.className = "wide"; root.style.minWidth = "80px";
+      ROOT_CHOICES.forEach(n => root.add(new Option(n, n)));
+      root.value = s.rootNote;
+      root.addEventListener("change", () => {
+        s.rootNote = root.value; s.rootFreq = noteToFreq(root.value); updateExport();
+      });
+
+      const sus = document.createElement("select");
+      sus.className = "wide";
+      sus.add(new Option("Ring out (full sample)", "full"));
+      sus.add(new Option("Cut to note length", "cut"));
+      sus.value = s.fullLength ? "full" : "cut";
+      sus.addEventListener("change", () => { s.fullLength = sus.value === "full"; updateExport(); });
+
+      const test = document.createElement("button");
+      test.textContent = "▶ Test";
+      test.addEventListener("click", () => playNote(s.rootFreq, 0.6, 0.12, "s:" + s.id));
+
+      const del = document.createElement("button");
+      del.className = "danger"; del.textContent = "Remove";
+      del.addEventListener("click", () => {
+        const sound = "s:" + s.id;
+        channels.forEach(c => { if (c.sound === sound) c.sound = "square"; });
+        samples.splice(samples.indexOf(s), 1);
+        renderSampleList(); renderChannelTabs(); updateExport();
+      });
+
+      row.append(name, rootLab, root, sus, test, del);
+      sampleList.appendChild(row);
+    });
+  }
+
+  function renderChannelSettings() {
+    const ch = channels[activeChannel];
+    channelSettings.innerHTML = "";
+
+    const soundLab = document.createElement("label");
+    soundLab.append(ch.name + " sound ");
+    const sel = document.createElement("select");
+    sel.className = "wide";
+    WAVES.forEach(([v, t]) => sel.add(new Option(t + " (8-bit)", v)));
+    samples.forEach(s => sel.add(new Option("Sample: " + s.name, "s:" + s.id)));
+    sel.value = ch.sound;
+    sel.addEventListener("change", () => {
+      ch.sound = sel.value;
+      renderChannelTabs();
+      updateExport();
+      playNote(noteToFreq("C4"), 0.5, ch.volume * ch.level, ch.sound);
+    });
+    soundLab.appendChild(sel);
+
+    const volLab = document.createElement("label");
+    volLab.append("Volume ");
+    const vol = document.createElement("input");
+    vol.type = "range"; vol.min = 0; vol.max = 2; vol.step = 0.05; vol.value = ch.level;
+    const pct = document.createElement("span");
+    pct.textContent = Math.round(ch.level * 100) + "%";
+    vol.addEventListener("input", () => { ch.level = Number(vol.value); pct.textContent = Math.round(ch.level * 100) + "%"; });
+    vol.addEventListener("change", updateExport);
+    volLab.append(vol, pct);
+
+    channelSettings.append(soundLab, volLab);
+  }
+
+  function saveProject() {
+    const proj = {
+      app: "8bit-music-maker", version: 3,
+      tempo: Number(tempoInput.value) || 140,
+      previewLength: Number(previewLengthInput.value) || 0.14,
+      lowOctave, highOctave, steps,
+      channels: channels.map(c => ({ sound: c.sound, level: c.level })),
+      grids,
+      samples: samples.map(s => ({ id: s.id, name: s.name, rootNote: s.rootNote, fullLength: s.fullLength, b64: s.b64 }))
+    };
+    const blob = new Blob([JSON.stringify(proj)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "8bit-project.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function loadProject(file) {
+    try {
+      const p = JSON.parse(await file.text());
+      const newNotes = buildChromaticNotes(p.lowOctave, p.highOctave);
+      if (!Array.isArray(p.grids) || p.grids.length !== channels.length ||
+          p.grids[0].length !== newNotes.length || p.grids[0][0].length !== p.steps) {
+        throw new Error("this doesn't look like a project saved from this program");
+      }
+      const loaded = [];
+      for (const sd of (p.samples || [])) {
+        const rootNote = sd.rootNote || "C4";
+        const buffer = await decodeAudio(ensureAudio(), b64ToBuf(sd.b64));
+        loaded.push({ id: sd.id, name: sd.name, rootNote, rootFreq: noteToFreq(rootNote), fullLength: sd.fullLength !== false, buffer, b64: sd.b64 });
+      }
+      stopPlayback();
+      samples.length = 0;
+      loaded.forEach(x => samples.push(x));
+      nextSampleId = samples.reduce((m, x) => Math.max(m, Number(x.id) || 0), 0) + 1;
+      lowOctave = p.lowOctave; highOctave = p.highOctave; steps = p.steps;
+      notes = newNotes;
+      grids = p.grids;
+      (p.channels || []).forEach((c, i) => {
+        if (!channels[i]) return;
+        channels[i].sound = c.sound || "square";
+        channels[i].level = c.level == null ? 1 : c.level;
+        if (isSample(channels[i].sound) && !sampleById(channels[i].sound.slice(2))) channels[i].sound = "square";
+      });
+      tempoInput.value = p.tempo || 140;
+      previewLengthInput.value = p.previewLength || 0.14;
+      renderSampleList(); renderGrid(); updateExport();
+    } catch (err) {
+      alert("Couldn't load that project: " + err.message);
+    }
+  }
+
+  function buildChromaticNotes(low, high) {
+    const arr = [];
+    for (let oct = high; oct >= low; oct--) {
+      for (let i = NOTE_ORDER.length - 1; i >= 0; i--) {
+        const name = NOTE_ORDER[i] + oct;
+        const midi = (oct + 1) * 12 + i;
+        arr.push({ name, freq: Number(midiToFreq(midi).toFixed(3)), isSharp: NOTE_ORDER[i].includes("#") });
+      }
+    }
+    return arr;
+  }
+
+  function ensureAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  function createGrid(rows, cols) {
+    return Array.from({length: rows}, () => Array(cols).fill(0));
+  }
+
+  function initData() {
+    notes = buildChromaticNotes(lowOctave, highOctave);
+    grids = channels.map(() => createGrid(notes.length, steps));
+  }
+
+  function rebuildNotesPreservingData(newLow, newHigh) {
+    const oldNotes = notes;
+    const oldGrids = grids;
+    const newNotes = buildChromaticNotes(newLow, newHigh);
+    const newGrids = channels.map(() => createGrid(newNotes.length, steps));
+    const oldIndexByName = new Map(oldNotes.map((n, i) => [n.name, i]));
+
+    for (let ch = 0; ch < channels.length; ch++) {
+      for (let r = 0; r < newNotes.length; r++) {
+        const oldIndex = oldIndexByName.get(newNotes[r].name);
+        if (oldIndex !== undefined) {
+          newGrids[ch][r] = oldGrids[ch][oldIndex].slice(0, steps);
+          while (newGrids[ch][r].length < steps) newGrids[ch][r].push(0);
+        }
+      }
+    }
+
+    lowOctave = newLow;
+    highOctave = newHigh;
+    notes = newNotes;
+    grids = newGrids;
+    renderGrid();
+    updateExport();
+  }
+
+  function renderChannelTabs() {
+    channelTabs.innerHTML = "";
+    channels.forEach((ch, idx) => {
+      const btn = document.createElement("button");
+      btn.className = `chip ${ch.className}` + (idx === activeChannel ? " active" : "");
+      btn.textContent = `${ch.name} · ${soundLabel(ch.sound)}`;
+      btn.addEventListener("click", () => {
+        activeChannel = idx;
+        renderChannelTabs();
+      });
+      channelTabs.appendChild(btn);
+    });
+    renderChannelSettings();
+  }
+
+  function extendGrid(delta) {
+    steps = Math.max(16, steps + delta);
+    grids = grids.map(channelGrid =>
+      channelGrid.map(row => {
+        const next = row.slice(0, steps);
+        while (next.length < steps) next.push(0);
+        return next;
+      })
+    );
+    if (currentStep >= steps) currentStep = -1;
+    mobileBarIndex = Math.min(mobileBarIndex, Math.max(0, Math.ceil(steps / 16) - 1));
+    renderGrid();
+    updateExport();
+  }
+
+  function playNote(freq, duration, volume, sound) {
+    const ctx = ensureAudio();
+    const now = ctx.currentTime;
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+    const sample = isSample(sound) ? sampleById(sound.slice(2)) : null;
+
+    if (sample) {
+      const src = ctx.createBufferSource();
+      src.buffer = sample.buffer;
+      src.playbackRate.value = freq / sample.rootFreq;   // pitch-shift from the recorded note
+      const peak = Math.min(1, volume * 6);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(peak, now + 0.004);
+      if (!sample.fullLength) {
+        const releaseAt = now + Math.max(0.01, duration - 0.05);
+        gain.gain.setValueAtTime(peak, releaseAt);
+        gain.gain.linearRampToValueAtTime(0.0001, releaseAt + 0.05);
+        src.stop(releaseAt + 0.06);
+      }
+      src.connect(gain);
+      src.start(now);
+      return;
+    }
+
+    const osc = ctx.createOscillator();
+    osc.type = WAVES.some(w => w[0] === sound) ? sound : "square";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    osc.connect(gain);
+    osc.start(now);
+    osc.stop(now + duration + 0.03);
+  }
+
+  function previewNoteByRow(rowIndex) {
+    const duration = Math.max(0.03, Number(previewLengthInput.value) || 0.14);
+    const ch = channels[activeChannel];
+    playNote(notes[rowIndex].freq, duration, ch.volume * ch.level, ch.sound);
+  }
+
+  function renderGrid() {
+    renderChannelTabs();
+    const mobile = window.matchMedia("(max-width: 700px)").matches;
+    const barCount = Math.max(1, Math.ceil(steps / 16));
+    mobileBarIndex = Math.max(0, Math.min(mobileBarIndex, barCount - 1));
+    const firstStep = mobile ? mobileBarIndex * 16 : 0;
+    const lastStep = mobile ? Math.min(steps, firstStep + 16) : steps;
+    if (mobileBarLabel) {
+      mobileBarLabel.textContent = `Bar ${mobileBarIndex + 1} of ${barCount}`;
+      previousBarBtn.disabled = mobileBarIndex === 0;
+      nextBarBtn.disabled = mobileBarIndex >= barCount - 1;
+    }
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    const blank = document.createElement("th");
+    blank.className = "noteHead";
+    blank.textContent = "Note";
+    headRow.appendChild(blank);
+
+    for (let s = firstStep; s < lastStep; s++) {
+      const th = document.createElement("th");
+      th.textContent = s + 1;
+      headRow.appendChild(th);
+    }
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    for (let r = 0; r < notes.length; r++) {
+      const tr = document.createElement("tr");
+      const label = document.createElement("td");
+      label.className = "noteLabel" + (notes[r].isSharp ? " sharpLabel" : "");
+      label.textContent = notes[r].name;
+      tr.appendChild(label);
+
+      for (let s = firstStep; s < lastStep; s++) {
+        const td = document.createElement("td");
+        td.className = "stepCell";
+        if (notes[r].isSharp) td.classList.add("blackKeyRow");
+        if (s % 4 === 0) td.classList.add("beat");
+        if (s % 16 === 0) td.classList.add("bar");
+        td.dataset.row = r;
+        td.dataset.step = s;
+
+        for (let ch = 0; ch < channels.length; ch++) {
+          if (grids[ch][r][s]) td.classList.add("on", channels[ch].className);
+        }
+
+        td.addEventListener("click", () => {
+          grids[activeChannel][r][s] = grids[activeChannel][r][s] ? 0 : 1;
+          td.classList.remove("ch1", "ch2", "ch3", "on");
+          for (let ch = 0; ch < channels.length; ch++) {
+            if (grids[ch][r][s]) td.classList.add("on", channels[ch].className);
+          }
+          previewNoteByRow(r);
+          updateExport();
+        });
+
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+
+    table.appendChild(tbody);
+    gridWrap.innerHTML = "";
+    gridWrap.appendChild(table);
+    paintPlayhead();
+  }
+
+  function paintPlayhead() {
+    document.querySelectorAll(".stepCell.playhead").forEach(cell => cell.classList.remove("playhead"));
+    if (currentStep < 0) return;
+    document.querySelectorAll(`.stepCell[data-step="${currentStep}"]`).forEach(cell => cell.classList.add("playhead"));
+  }
+
+  function stepDurationMs() {
+    const bpm = Math.max(40, Math.min(300, Number(tempoInput.value) || 140));
+    return (60000 / bpm) / 4;
+  }
+
+  function advance() {
+    currentStep = (currentStep + 1) % steps;
+    if (window.matchMedia("(max-width: 700px)").matches && Math.floor(currentStep / 16) !== mobileBarIndex) {
+      mobileBarIndex = Math.floor(currentStep / 16);
+      renderGrid();
+    }
+    paintPlayhead();
+    for (let ch = 0; ch < channels.length; ch++) {
+      const channel = channels[ch];
+      for (let r = 0; r < notes.length; r++) {
+        if (grids[ch][r][currentStep]) {
+          playNote(notes[r].freq, channel.noteLength, channel.volume * channel.level, channel.sound);
+        }
+      }
+    }
+  }
+
+  function startPlayback() {
+    if (timer) return;
+    ensureAudio();
+    advance();
+    timer = setInterval(advance, stepDurationMs());
+    playBtn.textContent = "Playing...";
+  }
+
+  function stopPlayback() {
+    if (timer) clearInterval(timer);
+    timer = null;
+    currentStep = -1;
+    paintPlayhead();
+    playBtn.textContent = "Play";
+  }
+
+  function clearCurrentChannel() {
+    grids[activeChannel] = createGrid(notes.length, steps);
+    renderGrid();
+    updateExport();
+  }
+
+  function clearAllChannels() {
+    grids = channels.map(() => createGrid(notes.length, steps));
+    renderGrid();
+    updateExport();
+  }
+
+  function exportData() {
+    const used = new Set(channels.filter(c => isSample(c.sound)).map(c => String(c.sound.slice(2))));
+    return {
+      title: "8-Bit Song",
+      tempo: Math.max(40, Math.min(300, Number(tempoInput.value) || 140)),
+      previewLength: Math.max(0.03, Number(previewLengthInput.value) || 0.14),
+      lowOctave,
+      highOctave,
+      steps,
+      notes,
+      channels,
+      samples: samples.filter(x => used.has(String(x.id))).map(x => ({ id: x.id, name: x.name, rootFreq: x.rootFreq, fullLength: x.fullLength, b64: x.b64 })),
+      grids
+    };
+  }
+
+  function buildExportHtml(data) {
+    const safeJson = JSON.stringify(data, null, 2).replace(/<\/script/gi, "<\\/script");
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${data.title}</title>
+<style>
+  body{margin:0;padding:20px;font-family:Arial, Helvetica, sans-serif;background:#0f172a;color:#e5e7eb}
+  .box{max-width:820px;margin:0 auto;background:#111827;border:1px solid #334155;border-radius:14px;padding:20px}
+  button{font:inherit;border:1px solid #475569;background:#1e293b;color:#e5e7eb;padding:10px 14px;border-radius:10px;cursor:pointer;margin-right:8px}
+  .tiny{color:#94a3b8;font-size:13px;margin-top:10px;line-height:1.4}
+  pre{white-space:pre-wrap;word-break:break-word;background:#020617;border:1px solid #334155;padding:12px;border-radius:10px}
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1 style="margin-top:0;">${data.title}</h1>
+    <p>Standalone 8-bit song player with 3 channels.</p>
+    <button id="playBtn">Play</button>
+    <button id="stopBtn">Stop</button>
+    <div class="tiny">
+      Tempo: ${data.tempo} BPM<br>
+      Steps: ${data.steps}<br>
+      Range: ${data.notes[data.notes.length - 1].name} to ${data.notes[0].name}<br>
+      Channels: ${data.channels.map(c => c.name + " (" + soundLabel(c.sound) + ")").join(", ")}
+    </div>
+    <h3>Embedded Song Data</h3>
+    <pre id="songData"></pre>
+  </div>
+<script>
+const song = ${safeJson};
+document.getElementById("songData").textContent = JSON.stringify(Object.assign({}, song, { samples: (song.samples || []).map(function(x) { return { id: x.id, name: x.name, rootFreq: x.rootFreq, fullLength: x.fullLength }; }) }), null, 2);
+let audioCtx = null;
+let timer = null;
+let currentStep = -1;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+var sampleBuffers = {};
+var samplesReady = null;
+function b64ToBuf(b64) {
+  var bin = atob(b64);
+  var bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+function decodeAudio(ctx, ab) {
+  return new Promise(function(res, rej) {
+    var p = ctx.decodeAudioData(ab, res, rej);
+    if (p && p.catch) p.catch(rej);
+  });
+}
+function loadSamples() {
+  if (samplesReady) return samplesReady;
+  var ctx = ensureAudio();
+  samplesReady = Promise.all((song.samples || []).map(function(x) {
+    return decodeAudio(ctx, b64ToBuf(x.b64)).then(function(buf) { sampleBuffers[x.id] = buf; }).catch(function() {});
+  }));
+  return samplesReady;
+}
+function playNote(freq, duration, volume, sound) {
+  var ctx = ensureAudio();
+  var now = ctx.currentTime;
+  var gain = ctx.createGain();
+  gain.connect(ctx.destination);
+  var sample = null;
+  if (typeof sound === "string" && sound.indexOf("s:") === 0) {
+    sample = (song.samples || []).filter(function(x) { return String(x.id) === sound.slice(2); })[0] || null;
+  }
+  if (sample && sampleBuffers[sample.id]) {
+    var src = ctx.createBufferSource();
+    src.buffer = sampleBuffers[sample.id];
+    src.playbackRate.value = freq / sample.rootFreq;
+    var peak = Math.min(1, volume * 6);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(peak, now + 0.004);
+    if (!sample.fullLength) {
+      var releaseAt = now + Math.max(0.01, duration - 0.05);
+      gain.gain.setValueAtTime(peak, releaseAt);
+      gain.gain.linearRampToValueAtTime(0.0001, releaseAt + 0.05);
+      src.stop(releaseAt + 0.06);
+    }
+    src.connect(gain);
+    src.start(now);
+    return;
+  }
+  if (sample) return;
+  var osc = ctx.createOscillator();
+  osc.type = ["square", "triangle", "sawtooth", "sine"].indexOf(sound) >= 0 ? sound : "square";
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), now + 0.008);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  osc.connect(gain);
+  osc.start(now);
+  osc.stop(now + duration + 0.03);
+}
+function advance() {
+  currentStep = (currentStep + 1) % song.steps;
+  for (let ch = 0; ch < song.channels.length; ch++) {
+    const channel = song.channels[ch];
+    for (let r = 0; r < song.notes.length; r++) {
+      if (song.grids[ch][r][currentStep]) {
+        playNote(song.notes[r].freq, channel.noteLength, channel.volume * (channel.level == null ? 1 : channel.level), channel.sound);
+      }
+    }
+  }
+}
+var starting = false;
+function startSong() {
+  if (timer || starting) return;
+  starting = true;
+  ensureAudio();
+  loadSamples().then(function() {
+    if (!starting) return;
+    starting = false;
+    if (timer) return;
+    advance();
+    timer = setInterval(advance, (60000 / song.tempo) / 4);
+  });
+}
+function stopSong() {
+  starting = false;
+  if (timer) clearInterval(timer);
+  timer = null;
+  currentStep = -1;
+}
+document.getElementById("playBtn").addEventListener("click", startSong);
+document.getElementById("stopBtn").addEventListener("click", stopSong);
+<\/script>
+</body>
+</html>`;
+  }
+
+  function doUpdateExport() {
+    clearTimeout(exportTimer);
+    exportBox.value = buildExportHtml(exportData());
+  }
+  function updateExport() {
+    clearTimeout(exportTimer);
+    exportTimer = setTimeout(doUpdateExport, 150);
+  }
+
+  function downloadExport() {
+    doUpdateExport();
+    const blob = new Blob([exportBox.value], {type: "text/html"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "8bit-song-export.html";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function copyExport() {
+    doUpdateExport();
+    try {
+      await navigator.clipboard.writeText(exportBox.value);
+      copyBtn.textContent = "Copied!";
+      setTimeout(() => copyBtn.textContent = "Copy Export Code", 1200);
+    } catch (err) {
+      copyBtn.textContent = "Copy failed";
+      setTimeout(() => copyBtn.textContent = "Copy Export Code", 1200);
+    }
+  }
+
+  function scheduleOfflineNote(ctx, destination, startTime, freq, channel) {
+    const duration = channel.noteLength;
+    const volume = channel.volume * channel.level;
+    const gain = ctx.createGain();
+    gain.connect(destination);
+    const sample = isSample(channel.sound) ? sampleById(channel.sound.slice(2)) : null;
+
+    if (sample) {
+      const src = ctx.createBufferSource();
+      const playbackRate = freq / sample.rootFreq;
+      const peak = Math.min(1, volume * 6);
+      src.buffer = sample.buffer;
+      src.playbackRate.value = playbackRate;
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.linearRampToValueAtTime(peak, startTime + 0.004);
+      if (!sample.fullLength) {
+        const releaseAt = startTime + Math.max(0.01, duration - 0.05);
+        gain.gain.setValueAtTime(peak, releaseAt);
+        gain.gain.linearRampToValueAtTime(0.0001, releaseAt + 0.05);
+        src.stop(releaseAt + 0.06);
+      }
+      src.connect(gain);
+      src.start(startTime);
+      return sample.fullLength ? sample.buffer.duration / playbackRate : duration + 0.06;
+    }
+
+    const osc = ctx.createOscillator();
+    osc.type = WAVES.some(w => w[0] === channel.sound) ? channel.sound : "square";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), startTime + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+    osc.connect(gain);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.03);
+    return duration + 0.03;
+  }
+
+  function audioRenderLength(stepSeconds) {
+    let latestEnd = steps * stepSeconds;
+    for (let ch = 0; ch < channels.length; ch++) {
+      const channel = channels[ch];
+      const sample = isSample(channel.sound) ? sampleById(channel.sound.slice(2)) : null;
+      for (let r = 0; r < notes.length; r++) {
+        for (let s = 0; s < steps; s++) {
+          if (!grids[ch][r][s]) continue;
+          let tail = channel.noteLength + 0.06;
+          if (sample && sample.fullLength) {
+            tail = sample.buffer.duration / (notes[r].freq / sample.rootFreq);
+          }
+          latestEnd = Math.max(latestEnd, s * stepSeconds + tail);
+        }
+      }
+    }
+    return latestEnd + 0.12;
+  }
+
+  async function renderSongAudio() {
+    const sampleRate = 44100;
+    const bpm = Math.max(40, Math.min(300, Number(tempoInput.value) || 140));
+    const stepSeconds = (60 / bpm) / 4;
+    const totalSeconds = audioRenderLength(stepSeconds);
+    const frameCount = Math.ceil(totalSeconds * sampleRate);
+    const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!OfflineCtx) throw new Error("This browser does not support offline audio rendering.");
+    const offline = new OfflineCtx(2, frameCount, sampleRate);
+
+    for (let ch = 0; ch < channels.length; ch++) {
+      const channel = channels[ch];
+      for (let r = 0; r < notes.length; r++) {
+        for (let s = 0; s < steps; s++) {
+          if (grids[ch][r][s]) {
+            scheduleOfflineNote(offline, offline.destination, s * stepSeconds, notes[r].freq, channel);
+          }
+        }
+      }
+    }
+    return offline.startRendering();
+  }
+
+  function writeAscii(view, offset, text) {
+    for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+  }
+
+  function audioBufferToWav(buffer) {
+    const channelsCount = Math.min(2, buffer.numberOfChannels);
+    const bytesPerSample = 2;
+    const dataSize = buffer.length * channelsCount * bytesPerSample;
+    const ab = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(ab);
+    writeAscii(view, 0, "RIFF");
+    view.setUint32(4, 36 + dataSize, true);
+    writeAscii(view, 8, "WAVE");
+    writeAscii(view, 12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, channelsCount, true);
+    view.setUint32(24, buffer.sampleRate, true);
+    view.setUint32(28, buffer.sampleRate * channelsCount * bytesPerSample, true);
+    view.setUint16(32, channelsCount * bytesPerSample, true);
+    view.setUint16(34, 16, true);
+    writeAscii(view, 36, "data");
+    view.setUint32(40, dataSize, true);
+
+    const channelData = [];
+    for (let ch = 0; ch < channelsCount; ch++) channelData.push(buffer.getChannelData(ch));
+    let offset = 44;
+    for (let i = 0; i < buffer.length; i++) {
+      for (let ch = 0; ch < channelsCount; ch++) {
+        const sample = Math.max(-1, Math.min(1, channelData[ch][i]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+        offset += 2;
+      }
+    }
+    return new Blob([ab], { type: "audio/wav" });
+  }
+
+  function downloadBlob(blob, filename) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  function nextPaint() {
+    return new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+  }
+
+  async function exportWav() {
+    wavBtn.disabled = true;
+    try {
+      audioExportStatus.textContent = "Rendering one pass of the song…";
+      await nextPaint();
+      const rendered = await renderSongAudio();
+      audioExportStatus.textContent = "Building WAV file…";
+      await nextPaint();
+      const blob = audioBufferToWav(rendered);
+      downloadBlob(blob, "8bit-song.wav");
+      audioExportStatus.textContent = "WAV downloaded.";
+    } catch (err) {
+      console.error(err);
+      audioExportStatus.textContent = "Audio export failed.";
+      alert("Couldn't export the audio: " + err.message);
+    } finally {
+      wavBtn.disabled = false;
+      setTimeout(() => {
+        if (/downloaded|failed/.test(audioExportStatus.textContent)) audioExportStatus.textContent = "";
+      }, 3500);
+    }
+  }
+
+  playBtn.addEventListener("click", () => timer ? stopPlayback() : startPlayback());
+  stopBtn.addEventListener("click", stopPlayback);
+  clearBtn.addEventListener("click", clearCurrentChannel);
+  clearAllBtn.addEventListener("click", clearAllChannels);
+  addStepBtn.addEventListener("click", () => extendGrid(16));
+  removeStepBtn.addEventListener("click", () => extendGrid(-16));
+  addOctaveHighBtn.addEventListener("click", () => rebuildNotesPreservingData(lowOctave, highOctave + 1));
+  removeOctaveHighBtn.addEventListener("click", () => { if (highOctave > lowOctave) rebuildNotesPreservingData(lowOctave, highOctave - 1); });
+  addOctaveLowBtn.addEventListener("click", () => rebuildNotesPreservingData(Math.max(0, lowOctave - 1), highOctave));
+  removeOctaveLowBtn.addEventListener("click", () => { if (lowOctave < highOctave) rebuildNotesPreservingData(lowOctave + 1, highOctave); });
+  tempoInput.addEventListener("change", () => {
+    if (timer) {
+      stopPlayback();
+      startPlayback();
+    }
+    updateExport();
+  });
+  previewLengthInput.addEventListener("change", updateExport);
+  exportBtn.addEventListener("click", doUpdateExport);
+  sampleFile.addEventListener("change", async () => {
+    for (const f of Array.from(sampleFile.files)) await addSampleFile(f);
+    sampleFile.value = "";
+  });
+  loadProjFile.addEventListener("change", async () => {
+    if (loadProjFile.files[0]) await loadProject(loadProjFile.files[0]);
+    loadProjFile.value = "";
+  });
+  saveProjBtn.addEventListener("click", saveProject);
+  downloadBtn.addEventListener("click", downloadExport);
+  copyBtn.addEventListener("click", copyExport);
+  wavBtn.addEventListener("click", exportWav);
+  previousBarBtn.addEventListener("click", () => { mobileBarIndex = Math.max(0, mobileBarIndex - 1); renderGrid(); });
+  nextBarBtn.addEventListener("click", () => { mobileBarIndex = Math.min(Math.ceil(steps / 16) - 1, mobileBarIndex + 1); renderGrid(); });
+  window.addEventListener("resize", () => renderGrid());
+
+  initData();
+  renderSampleList();
+  renderGrid();
+  doUpdateExport();
+})();
+</script>
+
+
+</body></html>
