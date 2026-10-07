@@ -191,7 +191,12 @@
       <label class="fileBtn">Load Project<input id="loadProjFile" type="file" accept=".json,application/json"></label>
     </div>
     <div id="sampleList"></div>
-    <div class="small">Each file is assumed to be playing middle C (C4), and gets pitch-shifted for every other row. If a recording is a different note, set its "Recorded pitch". After loading, pick it from the Sound menu under the channel tabs. Samples are not remembered between visits, so use Save Project to keep them with your song.</div>
+    <div class="controls" style="margin-top:10px;">
+      <button id="restoreAutoSaveBtn" type="button" hidden>Restore Auto-Saved Draft</button>
+      <button id="clearAutoSaveBtn" type="button" class="danger" hidden>Delete Recovery Draft</button>
+    </div>
+    <div id="autoSaveStatus" class="small" aria-live="polite">Checking for a recovery draft…</div>
+    <div class="small">Each file is assumed to be playing middle C (C4), and gets pitch-shifted for every other row. If a recording is a different note, set its "Recorded pitch". After loading, pick it from the Sound menu under the channel tabs. Use Save Project to download a portable copy; the recovery draft stays in this browser on this device.</div>
   </div>
 </div>
 
@@ -249,12 +254,24 @@
   const sampleFile = document.getElementById("sampleFile");
   const saveProjBtn = document.getElementById("saveProjBtn");
   const loadProjFile = document.getElementById("loadProjFile");
+  const restoreAutoSaveBtn = document.getElementById("restoreAutoSaveBtn");
+  const clearAutoSaveBtn = document.getElementById("clearAutoSaveBtn");
+  const autoSaveStatus = document.getElementById("autoSaveStatus");
   const selectPatternBtn = document.getElementById("selectPatternBtn");
   const copyPatternBtn = document.getElementById("copyPatternBtn");
   const pastePatternBtn = document.getElementById("pastePatternBtn");
   const undoPasteBtn = document.getElementById("undoPasteBtn");
   const cancelPatternBtn = document.getElementById("cancelPatternBtn");
   const patternStatus = document.getElementById("patternStatus");
+  const AUTO_SAVE_DB_NAME = "8bit-music-maker-recovery";
+  const AUTO_SAVE_STORE_NAME = "drafts";
+  const AUTO_SAVE_RECORD_KEY = "latest";
+  let autoSaveDbPromise = null;
+  let autoSaveTimer = null;
+  let autoSaveDirty = false;
+  let autoSaveBusy = false;
+  let autoSaveRevision = 0;
+  let suppressAutoSave = false;
 
   function midiToFreq(midi) {
     return 440 * Math.pow(2, (midi - 69) / 12);
@@ -397,16 +414,21 @@
     channelSettings.append(soundLab, volLab);
   }
 
-  function saveProject() {
-    const proj = {
+  function buildProjectData() {
+    return {
       app: "8bit-music-maker", version: 3,
       tempo: Number(tempoInput.value) || 140,
       previewLength: Number(previewLengthInput.value) || 0.14,
       lowOctave, highOctave, steps,
       channels: channels.map(c => ({ sound: c.sound, level: c.level })),
-      grids,
+      grids: cloneGrids(),
       samples: samples.map(s => ({ id: s.id, name: s.name, rootNote: s.rootNote, fullLength: s.fullLength, b64: s.b64 }))
     };
+  }
+
+  function saveProject() {
+    const proj = buildProjectData();
+    void writeAutoSave(true);
     const blob = new Blob([JSON.stringify(proj)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -417,9 +439,7 @@
     URL.revokeObjectURL(a.href);
   }
 
-  async function loadProject(file) {
-    try {
-      const p = JSON.parse(await file.text());
+  async function applyProjectData(p) {
       const newNotes = buildChromaticNotes(p.lowOctave, p.highOctave);
       if (!Array.isArray(p.grids) || p.grids.length !== channels.length ||
           p.grids[0].length !== newNotes.length || p.grids[0][0].length !== p.steps) {
@@ -452,8 +472,140 @@
       tempoInput.value = p.tempo || 140;
       previewLengthInput.value = p.previewLength || 0.14;
       renderSampleList(); renderGrid(); updateExport();
+  }
+
+  async function loadProject(file) {
+    try {
+      const p = JSON.parse(await file.text());
+      await applyProjectData(p);
     } catch (err) {
       alert("Couldn't load that project: " + err.message);
+    }
+  }
+
+  function openAutoSaveDb() {
+    if (!window.indexedDB) return Promise.reject(new Error("This browser doesn't support local recovery saves."));
+    if (autoSaveDbPromise) return autoSaveDbPromise;
+    autoSaveDbPromise = new Promise((resolve, reject) => {
+      const request = indexedDB.open(AUTO_SAVE_DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains(AUTO_SAVE_STORE_NAME)) {
+          request.result.createObjectStore(AUTO_SAVE_STORE_NAME);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error("Could not open browser storage."));
+      request.onblocked = () => reject(new Error("Browser storage is busy. Close another copy of the music maker and reload."));
+    });
+    return autoSaveDbPromise;
+  }
+
+  function readAutoSave() {
+    return openAutoSaveDb().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(AUTO_SAVE_STORE_NAME, "readonly");
+      const request = tx.objectStore(AUTO_SAVE_STORE_NAME).get(AUTO_SAVE_RECORD_KEY);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error || new Error("Could not read the recovery draft."));
+    }));
+  }
+
+  function updateAutoSaveControls(record) {
+    const available = Boolean(record && record.project);
+    restoreAutoSaveBtn.hidden = !available;
+    clearAutoSaveBtn.hidden = !available;
+    if (available) {
+      autoSaveStatus.textContent = `Recovery draft available from ${new Date(record.savedAt).toLocaleString()}. It stays in this browser on this device.`;
+    }
+  }
+
+  async function checkAutoSave() {
+    try {
+      const record = await readAutoSave();
+      updateAutoSaveControls(record);
+      if (!record) autoSaveStatus.textContent = "Auto-save will keep a recovery draft in this browser after you make changes.";
+    } catch (err) {
+      autoSaveStatus.textContent = "Recovery auto-save is unavailable in this browser. Use Save Project to download a copy.";
+    }
+  }
+
+  function queueAutoSave() {
+    if (suppressAutoSave) return;
+    autoSaveDirty = true;
+    autoSaveRevision++;
+    autoSaveStatus.textContent = "Changes detected. Saving a recovery draft…";
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => { void writeAutoSave(); }, 2500);
+  }
+
+  async function writeAutoSave(force = false) {
+    if (suppressAutoSave || (!autoSaveDirty && !force)) return;
+    if (autoSaveBusy) return;
+    autoSaveBusy = true;
+    const savedRevision = autoSaveRevision;
+    const record = { project: buildProjectData(), savedAt: Date.now() };
+    try {
+      const db = await openAutoSaveDb();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(AUTO_SAVE_STORE_NAME, "readwrite");
+        tx.objectStore(AUTO_SAVE_STORE_NAME).put(record, AUTO_SAVE_RECORD_KEY);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error("Could not save the recovery draft."));
+        tx.onabort = () => reject(tx.error || new Error("Recovery save was interrupted."));
+      });
+      updateAutoSaveControls(record);
+      if (savedRevision === autoSaveRevision) {
+        autoSaveDirty = false;
+        autoSaveStatus.textContent = `Recovery draft saved at ${new Date(record.savedAt).toLocaleTimeString()}.`;
+      } else {
+        autoSaveDirty = true;
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => { void writeAutoSave(); }, 1000);
+      }
+    } catch (err) {
+      autoSaveDirty = true;
+      autoSaveStatus.textContent = "Could not save a recovery draft. Use Save Project to download a copy.";
+    } finally {
+      autoSaveBusy = false;
+    }
+  }
+
+  async function restoreAutoSave() {
+    try {
+      const record = await readAutoSave();
+      if (!record || !record.project) {
+        await checkAutoSave();
+        return;
+      }
+      if ((autoSaveDirty || grids.some(channel => channel.some(row => row.some(Boolean)))) &&
+          !confirm("Restore the recovery draft? This replaces the song currently in the editor.")) return;
+      clearTimeout(autoSaveTimer);
+      autoSaveDirty = false;
+      suppressAutoSave = true;
+      try { await applyProjectData(record.project); }
+      finally { suppressAutoSave = false; }
+      updateAutoSaveControls(record);
+      autoSaveStatus.textContent = `Recovery draft from ${new Date(record.savedAt).toLocaleString()} restored.`;
+    } catch (err) {
+      autoSaveStatus.textContent = "Could not restore the recovery draft. Use Load Project to open a downloaded copy.";
+    }
+  }
+
+  async function clearAutoSave() {
+    if (!confirm("Delete the saved recovery draft from this browser?")) return;
+    try {
+      const db = await openAutoSaveDb();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(AUTO_SAVE_STORE_NAME, "readwrite");
+        tx.objectStore(AUTO_SAVE_STORE_NAME).delete(AUTO_SAVE_RECORD_KEY);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error("Could not delete the recovery draft."));
+      });
+      autoSaveDirty = false;
+      clearTimeout(autoSaveTimer);
+      updateAutoSaveControls(null);
+      autoSaveStatus.textContent = "Recovery draft deleted. Auto-save will create a new one after your next edit.";
+    } catch (err) {
+      autoSaveStatus.textContent = "Could not delete the recovery draft from this browser.";
     }
   }
 
@@ -1029,6 +1181,7 @@ document.getElementById("stopBtn").addEventListener("click", stopSong);
     exportBox.value = buildExportHtml(exportData());
   }
   function updateExport() {
+    queueAutoSave();
     clearTimeout(exportTimer);
     exportTimer = setTimeout(doUpdateExport, 150);
   }
@@ -1244,6 +1397,8 @@ document.getElementById("stopBtn").addEventListener("click", stopSong);
     loadProjFile.value = "";
   });
   saveProjBtn.addEventListener("click", saveProject);
+  restoreAutoSaveBtn.addEventListener("click", restoreAutoSave);
+  clearAutoSaveBtn.addEventListener("click", clearAutoSave);
   downloadBtn.addEventListener("click", downloadExport);
   copyBtn.addEventListener("click", copyExport);
   wavBtn.addEventListener("click", exportWav);
@@ -1266,11 +1421,15 @@ document.getElementById("stopBtn").addEventListener("click", stopSong);
     }
   });
   window.addEventListener("resize", () => renderGrid());
+  window.addEventListener("pagehide", () => { if (autoSaveDirty) void writeAutoSave(); });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && autoSaveDirty) void writeAutoSave(); });
+  setInterval(() => { if (autoSaveDirty) void writeAutoSave(); }, 60000);
 
   initData();
   renderSampleList();
   renderGrid();
   doUpdateExport();
+  void checkAutoSave();
 })();
 </script>
 
